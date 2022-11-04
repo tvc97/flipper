@@ -8,7 +8,6 @@
 package com.facebook.flipper.plugins.uidebugger.descriptors
 
 import android.app.Activity
-import com.facebook.flipper.plugins.uidebugger.common.InspectableObject
 import com.facebook.flipper.plugins.uidebugger.core.FragmentTracker
 
 object ActivityDescriptor : ChainedDescriptor<Activity>() {
@@ -17,15 +16,14 @@ object ActivityDescriptor : ChainedDescriptor<Activity>() {
     return node.javaClass.simpleName
   }
 
-  override fun onGetChildren(node: Activity, children: MutableList<Any>) {
+  override fun onGetChildren(node: Activity): List<Any> {
+    val children = mutableListOf<Any>()
+
     node.window?.let { window -> children.add(window) }
 
     val fragments = FragmentTracker.getDialogFragments(node)
     fragments.forEach { fragment -> children.add(fragment) }
-  }
 
-  override fun onGetData(
-      node: Activity,
-      attributeSections: MutableMap<String, InspectableObject>
-  ) {}
+    return children
+  }
 }

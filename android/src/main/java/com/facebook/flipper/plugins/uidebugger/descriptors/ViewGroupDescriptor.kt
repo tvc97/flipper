@@ -11,8 +11,9 @@ import android.os.Build
 import android.view.View
 import android.view.ViewGroup
 import androidx.core.view.ViewGroupCompat
-import com.facebook.flipper.plugins.uidebugger.common.*
+import com.facebook.flipper.plugins.uidebugger.common.EnumMapping
 import com.facebook.flipper.plugins.uidebugger.core.FragmentTracker
+import com.facebook.flipper.plugins.uidebugger.model.*
 
 object ViewGroupDescriptor : ChainedDescriptor<ViewGroup>() {
 
@@ -20,15 +21,20 @@ object ViewGroupDescriptor : ChainedDescriptor<ViewGroup>() {
     return node.javaClass.simpleName
   }
 
-  override fun onGetChildren(node: ViewGroup, children: MutableList<Any>) {
+  override fun onGetChildren(node: ViewGroup): List<Any> {
+    val children = mutableListOf<Any>()
+
     val count = node.childCount - 1
     for (i in 0..count) {
       val child: View = node.getChildAt(i)
       val fragment = FragmentTracker.getFragment(child)
+
       if (fragment != null) {
         children.add(fragment)
       } else children.add(child)
     }
+
+    return children
   }
 
   override fun onGetData(

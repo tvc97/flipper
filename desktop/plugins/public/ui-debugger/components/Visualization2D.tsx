@@ -10,21 +10,20 @@
 import React from 'react';
 import {Id, Snapshot, Tag, UINode} from '../types';
 import {styled, Layout, theme} from 'flipper-plugin';
-import {Typography} from 'antd';
 
 export const Visualization2D: React.FC<
   {
-    root: Id;
+    rootId: Id;
     nodes: Map<Id, UINode>;
     snapshots: Map<Id, Snapshot>;
     hoveredNode?: Id;
     selectedNode?: Id;
-    onSelectNode: (id: Id) => void;
+    onSelectNode: (id?: Id) => void;
     onHoverNode: (id?: Id) => void;
     modifierPressed: boolean;
   } & React.HTMLAttributes<HTMLDivElement>
 > = ({
-  root,
+  rootId,
   nodes,
   snapshots,
   hoveredNode,
@@ -34,52 +33,49 @@ export const Visualization2D: React.FC<
   modifierPressed,
 }) => {
   //todo, do a bfs search for the first bounds found
-  const rootBounds = nodes.get(root)?.bounds;
-  const rootSnapshot = snapshots.get(root);
+  const rootBounds = nodes.get(rootId)?.bounds;
+  const rootSnapshot = snapshots.get(rootId);
 
   if (!rootBounds) {
     return null;
   }
   return (
-    <Layout.Container gap="large">
-      <Typography.Title>Visualizer</Typography.Title>
-
-      <div
-        onMouseLeave={(e) => {
-          e.stopPropagation();
-          onHoverNode(undefined);
-        }}
-        style={{
-          /**
-           * This relative position is so the root visualization 2DNode and outer border has a non static element to
-           * position itself relative to.
-           *
-           * Subsequent Visualization2DNode are positioned relative to their parent as each one is position absolute
-           * which despite the name acts are a reference point for absolute positioning...
-           */
-          position: 'relative',
-          width: toPx(rootBounds.width),
-          height: toPx(rootBounds.height),
-        }}>
-        <OuterBorder />
-        {rootSnapshot ? (
-          <img
-            src={'data:image/jpeg;base64,' + rootSnapshot}
-            style={{maxWidth: '100%'}}
-          />
-        ) : null}
-        <Visualization2DNode
-          nodeId={root}
-          nodes={nodes}
-          snapshots={snapshots}
-          hoveredNode={hoveredNode}
-          selectedNode={selectedNode}
-          onSelectNode={onSelectNode}
-          onHoverNode={onHoverNode}
-          modifierPressed={modifierPressed}
+    <div
+      onMouseLeave={(e) => {
+        e.stopPropagation();
+        onHoverNode(undefined);
+      }}
+      style={{
+        /**
+         * This relative position is so the root visualization 2DNode and outer border has a non static element to
+         * position itself relative to.
+         *
+         * Subsequent Visualization2DNode are positioned relative to their parent as each one is position absolute
+         * which despite the name acts are a reference point for absolute positioning...
+         */
+        position: 'relative',
+        width: toPx(rootBounds.width),
+        height: toPx(rootBounds.height),
+        overflow: 'hidden',
+      }}>
+      <OuterBorder />
+      {rootSnapshot ? (
+        <img
+          src={'data:image/jpeg;base64,' + rootSnapshot}
+          style={{maxWidth: '100%'}}
         />
-      </div>
-    </Layout.Container>
+      ) : null}
+      <Visualization2DNode
+        nodeId={rootId}
+        nodes={nodes}
+        snapshots={snapshots}
+        hoveredNode={hoveredNode}
+        selectedNode={selectedNode}
+        onSelectNode={onSelectNode}
+        onHoverNode={onHoverNode}
+        modifierPressed={modifierPressed}
+      />
+    </div>
   );
 };
 
@@ -101,7 +97,7 @@ function Visualization2DNode({
   modifierPressed: boolean;
   hoveredNode?: Id;
   selectedNode?: Id;
-  onSelectNode: (id: Id) => void;
+  onSelectNode: (id?: Id) => void;
   onHoverNode: (id?: Id) => void;
 }) {
   const node = nodes.get(nodeId);
@@ -123,6 +119,7 @@ function Visualization2DNode({
   } else {
     childrenIds = node.children;
   }
+
   // stop drawing children if hovered with the modifier so you
   // can see parent views without their children getting in the way
   if (isHovered && modifierPressed) {
@@ -144,13 +141,6 @@ function Visualization2DNode({
     />
   ));
 
-  const hasOverlappingChild = childrenIds
-    .map((id) => nodes.get(id))
-    .find((child) => child?.bounds?.x === 0 || child?.bounds?.y === 0);
-
-  const isZeroWidthOrHeight =
-    node.bounds?.height === 0 || node.bounds?.width === 0;
-
   const bounds = node.bounds ?? {x: 0, y: 0, width: 0, height: 0};
 
   return (
@@ -164,10 +154,8 @@ function Visualization2DNode({
         top: toPx(bounds.y),
         width: toPx(bounds.width),
         height: toPx(bounds.height),
-        opacity: isSelected || isHovered ? 0.5 : 1,
+        opacity: isSelected ? 0.5 : 1,
         backgroundColor: isSelected
-          ? theme.primaryColor
-          : isHovered
           ? theme.selectionBackgroundColor
           : 'transparent',
       }}
@@ -181,22 +169,22 @@ function Visualization2DNode({
       }}
       onClick={(e) => {
         e.stopPropagation();
-        onSelectNode(nodeId);
+
+        if (hoveredNode === selectedNode) {
+          onSelectNode(undefined);
+        } else {
+          //the way click is resolved doesn't always match what is hovered, this is a way to ensure what is hovered is selected
+          onSelectNode(hoveredNode);
+        }
       }}>
-      <NodeBorder tags={node.tags}></NodeBorder>
-      {snapshot ? (
+      <NodeBorder hovered={isHovered} tags={node.tags}></NodeBorder>
+      {snapshot && (
         <img
           src={'data:image/jpeg;base64,' + snapshot}
           style={{maxWidth: '100%'}}
         />
-      ) : (
-        <>
-          {/* Dirty hack to avoid showing highly overlapping text */}
-          {!hasOverlappingChild && !isZeroWidthOrHeight && node.bounds
-            ? node.name
-            : null}
-        </>
       )}
+      {isHovered && <p style={{float: 'right'}}>{node.name}</p>}
       {children}
     </div>
   );
@@ -207,13 +195,13 @@ function Visualization2DNode({
  * node itself so that it has the same size but the border doesnt affect the sizing of its children
  * as border is part of the box model
  */
-const NodeBorder = styled.div<{tags: Tag[]}>((props) => ({
+const NodeBorder = styled.div<{tags: Tag[]; hovered: boolean}>((props) => ({
   position: 'absolute',
   top: 0,
   left: 0,
   bottom: 0,
   right: 0,
-  borderWidth: '1px',
+  borderWidth: props.hovered ? '2px' : '1px',
   borderStyle: 'solid',
   color: 'transparent',
   borderColor: props.tags.includes('Declarative')

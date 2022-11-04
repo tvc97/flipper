@@ -9,9 +9,10 @@ package com.facebook.flipper.plugins.uidebugger.descriptors
 
 import android.os.Build
 import android.widget.TextView
-import com.facebook.flipper.plugins.uidebugger.common.Inspectable
-import com.facebook.flipper.plugins.uidebugger.common.InspectableObject
-import com.facebook.flipper.plugins.uidebugger.common.InspectableValue
+import com.facebook.flipper.plugins.uidebugger.model.Color
+import com.facebook.flipper.plugins.uidebugger.model.Inspectable
+import com.facebook.flipper.plugins.uidebugger.model.InspectableObject
+import com.facebook.flipper.plugins.uidebugger.model.InspectableValue
 
 object TextViewDescriptor : ChainedDescriptor<TextView>() {
 
@@ -21,25 +22,28 @@ object TextViewDescriptor : ChainedDescriptor<TextView>() {
       node: TextView,
       attributeSections: MutableMap<SectionName, InspectableObject>
   ) {
-    val typeface = node.typeface
 
     val props =
         mutableMapOf<String, Inspectable>(
             "text" to InspectableValue.Text(node.text.toString(), false),
             "textSize" to InspectableValue.Number(node.textSize, false),
-            "textColor" to InspectableValue.Color(node.getTextColors().getDefaultColor(), false))
+            "textColor" to
+                InspectableValue.Color(Color.fromColor(node.textColors.defaultColor), false))
 
-    val typeFace =
-        mutableMapOf<String, InspectableValue>(
-            "isBold" to InspectableValue.Boolean(typeface.isBold, false),
-            "isItalic" to InspectableValue.Boolean(typeface.isItalic, false),
-        )
+    val typeface = node.typeface
+    if (typeface != null) {
+      val typeFaceProp =
+          mutableMapOf<String, InspectableValue>(
+              "isBold" to InspectableValue.Boolean(typeface.isBold, false),
+              "isItalic" to InspectableValue.Boolean(typeface.isItalic, false),
+          )
 
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-      typeFace["weight"] = InspectableValue.Number(typeface.weight, false)
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+        typeFaceProp["weight"] = InspectableValue.Number(typeface.weight, false)
+      }
+
+      props["typeface"] = InspectableObject(typeFaceProp)
     }
-
-    props["typeface"] = InspectableObject(typeFace)
 
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
       props["minLines"] = InspectableValue.Number(node.minLines, false)
@@ -48,6 +52,6 @@ object TextViewDescriptor : ChainedDescriptor<TextView>() {
       props["maxWidth"] = InspectableValue.Number(node.maxWidth, false)
     }
 
-    attributeSections.put("TextView", InspectableObject(props))
+    attributeSections["TextView"] = InspectableObject(props)
   }
 }

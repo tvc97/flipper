@@ -7,10 +7,19 @@
  * @format
  */
 
+import {TreeItemIndex} from 'react-complex-tree';
+
 export type Events = {
   init: InitEvent;
   subtreeUpdate: SubtreeUpdateEvent;
+  coordinateUpdate: CoordinateUpdateEvent;
   perfStats: PerfStatsEvent;
+};
+
+export type CoordinateUpdateEvent = {
+  observerType: String;
+  nodeId: Id;
+  coordinate: Coordinate;
 };
 
 export type SubtreeUpdateEvent = {
@@ -39,7 +48,7 @@ export type UINode = {
   name: string;
   attributes: Record<string, Inspectable>;
   children: Id[];
-  bounds?: Bounds;
+  bounds: Bounds;
   tags: Tag[];
   activeChild?: Id;
 };
@@ -51,8 +60,40 @@ export type Bounds = {
   height: number;
 };
 
+export type Size = {
+  width: number;
+  height: number;
+};
+
+export type SpaceBox = {
+  top: number;
+  right: number;
+  bottom: number;
+  left: number;
+};
+
+export type Coordinate = {
+  x: number;
+  y: number;
+};
+
+export type Coordinate3D = {
+  x: number;
+  y: number;
+  z: number;
+};
+
+export type Color = {
+  r: number;
+  g: number;
+  b: number;
+  alpha: number;
+};
+
 export type Snapshot = string;
-export type Id = number;
+export type Id = number | TreeItemIndex;
+
+export type TreeState = {expandedNodes: Id[]};
 
 export type Tag = 'Native' | 'Declarative' | 'Android' | 'Litho ';
 
@@ -60,7 +101,14 @@ export type Inspectable =
   | InspectableObject
   | InspectableText
   | InspectableNumber
-  | InspectableColor;
+  | InspectableColor
+  | InspectableBoolean
+  | InspectableEnum
+  | InspectableCoordinate
+  | InspectableCoordinate3D
+  | InspectableSize
+  | InspectableBounds
+  | InspectableSpaceBox;
 
 export type InspectableText = {
   type: 'text';
@@ -74,9 +122,51 @@ export type InspectableNumber = {
   mutable: boolean;
 };
 
+export type InspectableBoolean = {
+  type: 'boolean';
+  value: boolean;
+  mutable: boolean;
+};
+
+export type InspectableEnum = {
+  type: 'enum';
+  value: {value: string; values: string[]};
+  mutable: boolean;
+};
+
 export type InspectableColor = {
-  type: 'number';
-  value: number;
+  type: 'color';
+  value: Color;
+  mutable: boolean;
+};
+
+export type InspectableBounds = {
+  type: 'bounds';
+  value: Bounds;
+  mutable: boolean;
+};
+
+export type InspectableSize = {
+  type: 'size';
+  value: Size;
+  mutable: boolean;
+};
+
+export type InspectableCoordinate = {
+  type: 'coordinate';
+  value: Coordinate;
+  mutable: boolean;
+};
+
+export type InspectableCoordinate3D = {
+  type: 'coordinate3d';
+  value: Coordinate3D;
+  mutable: boolean;
+};
+
+export type InspectableSpaceBox = {
+  type: 'space';
+  value: SpaceBox;
   mutable: boolean;
 };
 

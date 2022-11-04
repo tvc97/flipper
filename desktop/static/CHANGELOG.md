@@ -1,3 +1,23 @@
+# 0.172.0 (26/10/2022)
+
+ * [D40394563](https://github.com/facebook/flipper/search?q=D40394563&type=Commits)
+ * [D40552235](https://github.com/facebook/flipper/search?q=D40552235&type=Commits) -  Add a universal debug export button
+ * [D40715523](https://github.com/facebook/flipper/search?q=D40715523&type=Commits) -  Stop doing eval to load server add-ons
+
+
+# 0.171.0 (17/10/2022)
+
+ * [D40338164](https://github.com/facebook/flipper/search?q=D40338164&type=Commits) -  Better error message for EADDRINUSE
+ * [D40340272](https://github.com/facebook/flipper/search?q=D40340272&type=Commits) -  Enhance a warning about taking too much time to process plugin messages
+ * [D40341873](https://github.com/facebook/flipper/search?q=D40341873&type=Commits) -  Ignore persistToLocalStorage in headless mode
+
+
+# 0.169.0 (7/10/2022)
+
+ * [D40099777](https://github.com/facebook/flipper/search?q=D40099777&type=Commits) -  Update com.vanniktech:gradle-maven-publish-plugin
+ * [D39835294](https://github.com/facebook/flipper/search?q=D39835294&type=Commits)
+
+
 # 0.168.0 (4/10/2022)
 
  * [D40019423](https://github.com/facebook/flipper/search?q=D40019423&type=Commits) -  Upgrade to gradle plugin 7.3.0

@@ -8,14 +8,22 @@
 package com.facebook.flipper.plugins.uidebugger.descriptors
 
 import androidx.viewpager.widget.ViewPager
-import com.facebook.flipper.plugins.uidebugger.common.InspectableObject
-import com.facebook.flipper.plugins.uidebugger.common.InspectableValue
+import com.facebook.flipper.plugins.uidebugger.core.FragmentTracker
+import com.facebook.flipper.plugins.uidebugger.model.InspectableObject
+import com.facebook.flipper.plugins.uidebugger.model.InspectableValue
 
 object ViewPagerDescriptor : ChainedDescriptor<ViewPager>() {
 
   override fun onGetName(node: ViewPager): String = node.javaClass.simpleName
 
-  override fun onGetActiveChild(node: ViewPager): Any? = node.getChildAt(node.currentItem)
+  override fun onGetActiveChild(node: ViewPager): Any? {
+    val child = node.getChildAt(node.currentItem)
+    val fragment = FragmentTracker.getFragment(child)
+    if (fragment != null) {
+      return fragment
+    }
+    return child
+  }
 
   override fun onGetData(
       node: ViewPager,
@@ -25,6 +33,6 @@ object ViewPagerDescriptor : ChainedDescriptor<ViewPager>() {
         InspectableObject(
             mapOf("currentItemIndex" to InspectableValue.Number(node.currentItem, false)))
 
-    attributeSections.put("ViewPager", props)
+    attributeSections["ViewPager"] = props
   }
 }

@@ -11,18 +11,18 @@
     "use-local-deps": "relative-deps"
   },
   "dependencies": {
-    "react": "^17.0.2",
-    "react-native": "^0.68.0",
-    "react-native-flipper": "^0.159.0",
-    "react-native-windows": "0.68.4"
+    "react": "^18.0.0",
+    "react-native": "^0.69.0",
+    "react-native-flipper": "^0.171.1",
+    "react-native-windows": "^0.69.0"
   },
   "devDependencies": {
-    "@babel/core": "^7.18.10",
-    "@babel/runtime": "^7.18.3",
+    "@babel/core": "^7.19.3",
+    "@babel/runtime": "^7.19.4",
     "babel-jest": "^29.1.2",
     "jest": "^28.1.3",
-    "metro-react-native-babel-preset": "^0.72.0",
-    "react-test-renderer": "18.1.0",
+    "metro-react-native-babel-preset": "^0.73.1",
+    "react-test-renderer": "18.2.0",
     "relative-deps": "^1.0.7",
     "metro-config": "^0.66.2"
   },

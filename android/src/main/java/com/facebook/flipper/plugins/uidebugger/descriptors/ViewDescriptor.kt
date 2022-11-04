@@ -10,6 +10,7 @@ package com.facebook.flipper.plugins.uidebugger.descriptors
 import android.annotation.SuppressLint
 import android.graphics.Bitmap
 import android.graphics.Canvas
+import android.graphics.Rect
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
 import android.os.Build
@@ -19,7 +20,12 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.LinearLayout
+import androidx.core.widget.NestedScrollView
+import androidx.viewpager.widget.ViewPager
 import com.facebook.flipper.plugins.uidebugger.common.*
+import com.facebook.flipper.plugins.uidebugger.common.BitmapPool
+import com.facebook.flipper.plugins.uidebugger.common.EnumMapping
+import com.facebook.flipper.plugins.uidebugger.model.*
 import com.facebook.flipper.plugins.uidebugger.model.Bounds
 import com.facebook.flipper.plugins.uidebugger.util.ResourcesUtil
 import java.lang.reflect.Field
@@ -28,8 +34,33 @@ object ViewDescriptor : ChainedDescriptor<View>() {
 
   override fun onGetName(node: View): String = node.javaClass.simpleName
 
-  override fun onGetBounds(node: View): Bounds =
-      Bounds(node.left, node.top, node.width, node.height)
+  override fun onGetBounds(node: View): Bounds {
+
+    if (node.parent is ViewPager) {
+      // override
+      return Bounds(0, 0, node.width, node.height)
+    }
+
+    var offsetX = 0
+    var offsetY = 0
+    if (node.parent is NestedScrollView) {
+      /**
+       * when a node is a child of nested scroll view android does not adjust the left/ top as the
+       * view scrolls. This seems to be unique to nested scroll view so we have this trick to find
+       * its actual position.
+       */
+      val localVisible = Rect()
+      node.getLocalVisibleRect(localVisible)
+      offsetX = localVisible.left
+      offsetY = localVisible.top
+    }
+
+    return Bounds(
+        node.left + node.translationX.toInt() - offsetX,
+        node.top + node.translationY.toInt() - offsetY,
+        node.width,
+        node.height)
+  }
 
   override fun onGetTags(node: View): Set<String> = BaseTags.NativeAndroid
 
@@ -37,20 +68,70 @@ object ViewDescriptor : ChainedDescriptor<View>() {
       node: View,
       attributeSections: MutableMap<SectionName, InspectableObject>
   ) {
+
+    val props = mutableMapOf<String, Inspectable>()
+
     val positionOnScreen = IntArray(2)
     node.getLocationOnScreen(positionOnScreen)
 
-    val props = mutableMapOf<String, Inspectable>()
-    props["height"] = InspectableValue.Number(node.height, mutable = true)
-    props["width"] = InspectableValue.Number(node.width, mutable = true)
-    props["alpha"] = InspectableValue.Number(node.alpha, mutable = true)
+    val localVisible = Rect()
+    node.getLocalVisibleRect(localVisible)
+
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP_MR1) {
+      props["position"] = InspectableValue.Coordinate3D(Coordinate3D(node.x, node.y, node.z))
+    } else {
+      props["position"] = InspectableValue.Coordinate(Coordinate(node.x, node.y))
+    }
+
+    props["globalPosition"] =
+        InspectableValue.Coordinate(Coordinate(positionOnScreen[0], positionOnScreen[1]))
+
+    props["size"] = InspectableValue.Size(Size(node.width, node.height), mutable = true)
+
+    props["bounds"] = InspectableValue.Bounds(Bounds(node.left, node.top, node.right, node.bottom))
+    props["padding"] =
+        InspectableValue.SpaceBox(
+            SpaceBox(node.paddingTop, node.paddingRight, node.paddingBottom, node.paddingLeft))
+
+    props["localVisibleRect"] =
+        InspectableObject(
+            mapOf(
+                "position" to
+                    InspectableValue.Coordinate(Coordinate(localVisible.left, localVisible.top)),
+                "size" to InspectableValue.Size(Size(localVisible.width(), localVisible.height()))),
+        )
+
+    props["rotation"] =
+        InspectableValue.Coordinate3D(Coordinate3D(node.rotationX, node.rotationY, node.rotation))
+    props["scale"] = InspectableValue.Coordinate(Coordinate(node.scaleX, node.scaleY))
+    props["pivot"] = InspectableValue.Coordinate(Coordinate(node.pivotX, node.pivotY))
+
+    props["layoutParams"] = getLayoutParams(node)
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
+      props["layoutDirection"] = LayoutDirectionMapping.toInspectable(node.layoutDirection, false)
+    }
+
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+      props["translation"] =
+          InspectableValue.Coordinate3D(
+              Coordinate3D(node.translationX, node.translationY, node.translationZ))
+    } else {
+      props["translation"] =
+          InspectableValue.Coordinate(Coordinate(node.translationX, node.translationY))
+    }
+
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+      props["elevation"] = InspectableValue.Number(node.elevation)
+    }
+
     props["visibility"] = VisibilityMapping.toInspectable(node.visibility, mutable = false)
 
-    fromDrawable(node.background)?.let { props["background"] = it }
+    fromDrawable(node.background)?.let { background -> props["background"] = background }
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+      fromDrawable(node.foreground)?.let { foreground -> props["foreground"] = foreground }
+    }
 
-    node.tag?.let { InspectableValue.fromAny(it, mutable = false) }?.let { props.put("tag", it) }
-    props["keyedTags"] = InspectableObject(getViewTags(node))
-    props["layoutParams"] = getLayoutParams(node)
+    props["alpha"] = InspectableValue.Number(node.alpha, mutable = true)
     props["state"] =
         InspectableObject(
             mapOf(
@@ -59,44 +140,16 @@ object ViewDescriptor : ChainedDescriptor<View>() {
                 "focused" to InspectableValue.Boolean(node.isFocused, mutable = false),
                 "selected" to InspectableValue.Boolean(node.isSelected, mutable = false)))
 
-    props["bounds"] =
-        InspectableObject(
-            mapOf<String, Inspectable>(
-                "left" to InspectableValue.Number(node.left, mutable = true),
-                "right" to InspectableValue.Number(node.right, mutable = true),
-                "top" to InspectableValue.Number(node.top, mutable = true),
-                "bottom" to InspectableValue.Number(node.bottom, mutable = true)))
-    props["padding"] =
-        InspectableObject(
-            mapOf<String, Inspectable>(
-                "left" to InspectableValue.Number(node.paddingLeft, mutable = true),
-                "right" to InspectableValue.Number(node.paddingRight, mutable = true),
-                "top" to InspectableValue.Number(node.paddingTop, mutable = true),
-                "bottom" to InspectableValue.Number(node.paddingBottom, mutable = true)))
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
+      props["textDirection"] = TextDirectionMapping.toInspectable(node.textDirection, false)
+      props["textAlignment"] = TextAlignmentMapping.toInspectable(node.textAlignment, false)
+    }
 
-    props["rotation"] =
-        InspectableObject(
-            mapOf<String, Inspectable>(
-                "x" to InspectableValue.Number(node.rotationX, mutable = true),
-                "y" to InspectableValue.Number(node.rotationY, mutable = true),
-                "z" to InspectableValue.Number(node.rotation, mutable = true)))
+    node.tag
+        ?.let { InspectableValue.fromAny(it, mutable = false) }
+        ?.let { tag -> props.put("tag", tag) }
 
-    props["scale"] =
-        InspectableObject(
-            mapOf(
-                "x" to InspectableValue.Number(node.scaleX, mutable = true),
-                "y" to InspectableValue.Number(node.scaleY, mutable = true)))
-    props["pivot"] =
-        InspectableObject(
-            mapOf(
-                "x" to InspectableValue.Number(node.pivotX, mutable = true),
-                "y" to InspectableValue.Number(node.pivotY, mutable = true)))
-
-    props["globalPosition"] =
-        InspectableObject(
-            mapOf(
-                "x" to InspectableValue.Number(positionOnScreen[0], mutable = false),
-                "y" to InspectableValue.Number(positionOnScreen[1], mutable = false)))
+    props["keyedTags"] = InspectableObject(getViewTags(node))
 
     attributeSections["View"] = InspectableObject(props.toMap())
   }
@@ -127,7 +180,7 @@ object ViewDescriptor : ChainedDescriptor<View>() {
 
   private fun fromDrawable(d: Drawable?): Inspectable? {
     return if (d is ColorDrawable) {
-      InspectableValue.Color(d.color, mutable = false)
+      InspectableValue.Color(Color.fromColor(d.color), mutable = false)
     } else null
   }
 
@@ -139,15 +192,13 @@ object ViewDescriptor : ChainedDescriptor<View>() {
     params["height"] = LayoutParamsMapping.toInspectable(layoutParams.height, mutable = true)
 
     if (layoutParams is ViewGroup.MarginLayoutParams) {
-      val margin =
-          InspectableObject(
-              mapOf<String, Inspectable>(
-                  "left" to InspectableValue.Number(layoutParams.leftMargin, mutable = true),
-                  "top" to InspectableValue.Number(layoutParams.topMargin, mutable = true),
-                  "right" to InspectableValue.Number(layoutParams.rightMargin, mutable = true),
-                  "bottom" to InspectableValue.Number(layoutParams.bottomMargin, mutable = true)))
-
-      params["margin"] = margin
+      params["margin"] =
+          InspectableValue.SpaceBox(
+              SpaceBox(
+                  layoutParams.topMargin,
+                  layoutParams.rightMargin,
+                  layoutParams.bottomMargin,
+                  layoutParams.leftMargin))
     }
     if (layoutParams is FrameLayout.LayoutParams) {
       params["gravity"] = GravityMapping.toInspectable(layoutParams.gravity, mutable = true)
@@ -274,6 +325,7 @@ object ViewDescriptor : ChainedDescriptor<View>() {
       object :
           EnumMapping<Int>(
               mapOf(
+                  "NONE" to -1,
                   "NO_GRAVITY" to Gravity.NO_GRAVITY,
                   "LEFT" to Gravity.LEFT,
                   "TOP" to Gravity.TOP,
