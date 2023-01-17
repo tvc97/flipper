@@ -34,7 +34,7 @@ import {
   IDEFileResolver,
   IDEType,
 } from 'flipper';
-import {message} from 'antd';
+import {message, notification} from 'antd';
 import {getFlipperLib} from 'flipper-plugin';
 
 type State = {
@@ -216,6 +216,10 @@ export default class LayoutPlugin extends FlipperPlugin<
 
   private static isMylesInvoked = false;
 
+  componentDidMount() {
+    this.onSuggestUIDebugger();
+  }
+
   init() {
     if (!this.props.persistedState) {
       // If the selected plugin from the previous session was layout, then while importing the flipper export, the redux store doesn't get updated in the first render, due to which the plugin crashes, as it has no persisted state
@@ -325,6 +329,74 @@ export default class LayoutPlugin extends FlipperPlugin<
     }
   };
 
+  onSuggestUIDebugger = () => {
+    if (
+      !getFlipperLib().GK('flipper_ui_debugger') ||
+      this.device.os !== 'Android'
+    ) {
+      return;
+    }
+
+    const lastShownTimestampKey =
+      'layout-plugin-UIDebuggerBannerLastShownTimestamp';
+    let lastShownTimestampFromStorage = undefined;
+    try {
+      lastShownTimestampFromStorage = window.localStorage.getItem(
+        lastShownTimestampKey,
+      );
+    } catch (e) {}
+
+    if (lastShownTimestampFromStorage) {
+      const WithinOneDay = (timestamp: number) => {
+        const Day = 1 * 24 * 60 * 60 * 1000;
+        const DayAgo = Date.now() - Day;
+
+        return timestamp > DayAgo;
+      };
+      const lastShownTimestamp = Number(lastShownTimestampFromStorage);
+      if (WithinOneDay(lastShownTimestamp)) {
+        // The banner was shown less than 24-hours ago, don't show it again.
+        return;
+      }
+    }
+
+    const lastShownTimestamp = Date.now();
+    try {
+      window.localStorage.setItem(
+        lastShownTimestampKey,
+        String(lastShownTimestamp),
+      );
+    } catch (e) {}
+
+    const key = `open-ui-debugger-${lastShownTimestamp}`;
+    const btn = (
+      <Button
+        type="primary"
+        size="small"
+        onClick={() => {
+          notification.close(key);
+          getFlipperLib().selectPlugin(
+            this.device,
+            this.realClient,
+            'ui-debugger',
+            undefined,
+          );
+        }}>
+        Try it now!
+      </Button>
+    );
+
+    notification.open({
+      message: 'A new UI Debugger is available! 🎉',
+      description: `A new plugin for UI debugging is available! 
+      Have you considered making the switch? Find it on your left panel.`,
+      duration: 30,
+      type: 'info',
+      btn,
+      key,
+    });
+  };
+
   onToggleSnapshotMode = () => {
     this.setState((prevState) => ({inSnapshotMode: !prevState.inSnapshotMode}));
   };
@@ -340,6 +412,7 @@ export default class LayoutPlugin extends FlipperPlugin<
         })
       : this.client;
   }
+
   onToggleAlignmentMode = () => {
     if (this.state.selectedElement) {
       if (this.client.isConnected) {

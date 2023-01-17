@@ -11,6 +11,7 @@ import android.graphics.Bitmap
 import com.facebook.flipper.plugins.uidebugger.model.Bounds
 import com.facebook.flipper.plugins.uidebugger.model.InspectableObject
 import com.facebook.flipper.plugins.uidebugger.model.MetadataId
+import com.facebook.flipper.plugins.uidebugger.util.Immediate
 
 object ObjectDescriptor : NodeDescriptor<Any> {
 
@@ -20,11 +21,15 @@ object ObjectDescriptor : NodeDescriptor<Any> {
     return node.javaClass.simpleName
   }
 
+  override fun getQualifiedName(node: Any): String {
+    return node::class.qualifiedName ?: ""
+  }
+
   override fun getChildren(node: Any) = listOf<Any>()
 
-  override fun getData(node: Any) = mutableMapOf<MetadataId, InspectableObject>()
+  override fun getAttributes(node: Any) = Immediate(mapOf<MetadataId, InspectableObject>())
 
-  override fun getBounds(node: Any): Bounds? = null
+  override fun getBounds(node: Any): Bounds = Bounds(0, 0, 0, 0)
 
   override fun getTags(node: Any): Set<String> = setOf(BaseTags.Unknown)
 

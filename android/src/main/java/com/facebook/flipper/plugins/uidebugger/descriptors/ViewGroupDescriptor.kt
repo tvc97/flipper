@@ -17,6 +17,14 @@ import com.facebook.flipper.plugins.uidebugger.model.*
 
 object ViewGroupDescriptor : ChainedDescriptor<ViewGroup>() {
 
+  private val LayoutModeMapping: EnumMapping<Int> =
+      object :
+          EnumMapping<Int>(
+              mapOf(
+                  "LAYOUT_MODE_CLIP_BOUNDS" to ViewGroupCompat.LAYOUT_MODE_CLIP_BOUNDS,
+                  "LAYOUT_MODE_OPTICAL_BOUNDS" to ViewGroupCompat.LAYOUT_MODE_OPTICAL_BOUNDS,
+              )) {}
+
   private const val NAMESPACE = "ViewGroup"
   private var SectionId =
       MetadataRegister.register(MetadataRegister.TYPE_ATTRIBUTE, NAMESPACE, NAMESPACE)
@@ -41,13 +49,18 @@ object ViewGroupDescriptor : ChainedDescriptor<ViewGroup>() {
   }
 
   private val LayoutModeAttributeId =
-      MetadataRegister.register(MetadataRegister.TYPE_LAYOUT, NAMESPACE, "layoutMode")
+      MetadataRegister.register(
+          MetadataRegister.TYPE_LAYOUT,
+          NAMESPACE,
+          "layoutMode",
+          false,
+          LayoutModeMapping.getInspectableValues())
   private val ClipChildrenAttributeId =
-      MetadataRegister.register(MetadataRegister.TYPE_LAYOUT, NAMESPACE, "layoutMode")
+      MetadataRegister.register(MetadataRegister.TYPE_LAYOUT, NAMESPACE, "clipChildren")
   private val ClipToPaddingAttributeId =
       MetadataRegister.register(MetadataRegister.TYPE_LAYOUT, NAMESPACE, "clipToPadding")
 
-  override fun onGetData(
+  override fun onGetAttributes(
       node: ViewGroup,
       attributeSections: MutableMap<MetadataId, InspectableObject>
   ) {
@@ -63,12 +76,4 @@ object ViewGroupDescriptor : ChainedDescriptor<ViewGroup>() {
 
     attributeSections[SectionId] = InspectableObject(props)
   }
-
-  private val LayoutModeMapping: EnumMapping<Int> =
-      object :
-          EnumMapping<Int>(
-              mapOf(
-                  "LAYOUT_MODE_CLIP_BOUNDS" to ViewGroupCompat.LAYOUT_MODE_CLIP_BOUNDS,
-                  "LAYOUT_MODE_OPTICAL_BOUNDS" to ViewGroupCompat.LAYOUT_MODE_OPTICAL_BOUNDS,
-              )) {}
 }

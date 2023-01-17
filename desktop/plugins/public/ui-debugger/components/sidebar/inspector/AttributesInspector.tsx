@@ -16,63 +16,48 @@ import {
   UINode,
 } from '../../../types';
 import {DataInspector, Panel, styled} from 'flipper-plugin';
-import {Checkbox, Col, Row} from 'antd';
+import {Col, Row} from 'antd';
 import {displayableName} from '../utilities/displayableName';
 import ColorInspector from './ColorInspector';
 import SizeInspector from './SizeInspector';
-import {theme} from 'flipper-plugin';
 import SpaceBoxInspector from './SpaceBoxInspector';
 import BoundsInspector from './BoundsInspector';
 import Coordinate3DInspector from './Coordinate3DInspector';
 import CoordinateInspector from './CoordinateInspector';
+import {
+  AutoMarginStyle,
+  BooleanAttributeValueStyle,
+  EnumAttributeValueStyle,
+  NumberAttributeValueStyle,
+  ObjectContainerStyle,
+  RowStyle,
+  TextAttributeValueStyle,
+} from './Styles';
+import {transform} from '../../../dataTransform';
+import {NoData} from './NoData';
 
-const NumberValue = styled.span({
-  color: theme.semanticColors.numberValue,
-  display: 'flex',
-});
+const NumberValue = styled.span(NumberAttributeValueStyle);
+const BooleanValue = styled.span(BooleanAttributeValueStyle);
+const TextValue = styled.span(TextAttributeValueStyle);
+const EnumValue = styled.span(EnumAttributeValueStyle);
+const ObjectContainer = styled.div(ObjectContainerStyle);
+const CenteredContentContainer = styled.div(AutoMarginStyle);
 
-const TextValue = styled.span({
-  color: theme.semanticColors.stringValue,
-  display: 'flex',
-});
-
-const EnumValue = styled.span({
-  color: theme.semanticColors.stringValue,
-  fontSize: theme.fontSize.small,
-  margin: 'auto',
-});
-
-const ContainerStyle = {
-  marginTop: 4,
-  marginBottom: 4,
-  borderStyle: 'solid',
-  borderColor: theme.dividerColor,
-  borderWidth: '0 0 1px 0',
-};
-
-const ObjectContainer = styled.div({
-  borderLeftWidth: 5,
-  borderLeftColor: 'lightgray',
-  borderLeftStyle: 'solid',
-});
-
-const CenterContainer = styled.div({
-  margin: 'auto',
-});
 type NamedAttributeInspectorProps = {
   name: string;
 };
+
 const NamedAttributeInspector: React.FC<NamedAttributeInspectorProps> = ({
   name,
   children,
 }) => {
   return (
-    <Row style={ContainerStyle}>
-      <Col span={8} style={{margin: 'auto'}}>
+    <Row style={RowStyle}>
+      <Col span={8} style={AutoMarginStyle}>
         {name}
       </Col>
       <Col span={16}>
-        <CenterContainer>{children}</CenterContainer>
+        <CenteredContentContainer>{children}</CenteredContentContainer>
       </Col>
     </Row>
   );
@@ -85,7 +70,7 @@ const ObjectAttributeInspector: React.FC<{
   level: number;
 }> = ({metadata, name, fields, level}) => {
   return (
-    <div style={ContainerStyle}>
+    <div style={RowStyle}>
       {name}
       {Object.keys(fields).map(function (key, _) {
         const metadataId: number = Number(key);
@@ -94,6 +79,32 @@ const ObjectAttributeInspector: React.FC<{
         return (
           <ObjectContainer
             key={metadataId}
+            style={{
+              paddingLeft: level,
+            }}>
+            {create(metadata, attributeName, inspectableValue, level + 2)}
+          </ObjectContainer>
+        );
+      })}
+    </div>
+  );
+};
+
+const ArrayAttributeInspector: React.FC<{
+  metadata: Map<MetadataId, Metadata>;
+  name: string;
+  items: Inspectable[];
+  level: number;
+}> = ({metadata, name, items, level}) => {
+  return (
+    <div style={RowStyle}>
+      {name}
+      {items.map(function (item, idx) {
+        const inspectableValue = item;
+        const attributeName = idx.toString();
+        return (
+          <ObjectContainer
+            key={name + idx}
             style={{
               paddingLeft: level,
             }}>
@@ -115,13 +126,13 @@ function create(
     case 'boolean':
       return (
         <NamedAttributeInspector name={displayableName(name)}>
-          <Checkbox checked={inspectable.value} disabled />
+          <BooleanValue>{inspectable.value ? 'TRUE' : 'FALSE'}</BooleanValue>
         </NamedAttributeInspector>
       );
     case 'enum':
       return (
         <NamedAttributeInspector name={displayableName(name)}>
-          <EnumValue>{inspectable.value.value}</EnumValue>
+          <EnumValue>{inspectable.value}</EnumValue>
         </NamedAttributeInspector>
       );
     case 'text':
@@ -138,9 +149,10 @@ function create(
       );
     case 'color':
       return (
-        <NamedAttributeInspector name={displayableName(name)}>
-          <ColorInspector color={inspectable.value} />
-        </NamedAttributeInspector>
+        <ColorInspector
+          name={displayableName(name)}
+          color={inspectable.value}
+        />
       );
     case 'size':
       return (
@@ -171,6 +183,21 @@ function create(
         <NamedAttributeInspector name={displayableName(name)}>
           <SpaceBoxInspector value={inspectable.value} />
         </NamedAttributeInspector>
+      );
+    case 'unknown':
+      return (
+        <NamedAttributeInspector name={displayableName(name)}>
+          <TextValue>{inspectable.value}</TextValue>
+        </NamedAttributeInspector>
+      );
+    case 'array':
+      return (
+        <ArrayAttributeInspector
+          metadata={metadata}
+          name={displayableName(name)}
+          items={inspectable.items}
+          level={level}
+        />
       );
     case 'object':
       return (
@@ -220,33 +247,47 @@ type Props = {
   node: UINode;
   metadata: Map<MetadataId, Metadata>;
   mode: InspectorMode;
-  rawDisplayEnabled?: boolean;
+  rawEnabled?: boolean;
 };
 export const AttributesInspector: React.FC<Props> = ({
   node,
   metadata,
   mode,
-  rawDisplayEnabled = false,
+  rawEnabled = true,
 }) => {
+  const keys = Object.keys(node.attributes);
+  const sections = keys
+    .map(function (key, _) {
+      const metadataId: number = Number(key);
+      /**
+       * The node top-level attributes refer to the displayable panels.
+       * The panel name is obtained by querying the metadata.
+       * The inspectable contains the actual attributes belonging to each panel.
+       */
+      return createSection(
+        mode,
+        metadata,
+        metadata.get(metadataId)?.name ?? '',
+        node.attributes[metadataId] as InspectableObject,
+      );
+    })
+    .filter((section) => section !== undefined);
+
+  if (sections.length === 0) {
+    return <NoData message="No data available in this section" />;
+  }
+
   return (
     <>
-      {Object.keys(node.attributes).map(function (key, _) {
-        const metadataId: number = Number(key);
-        /**
-         * The node top-level attributes refer to the displayable panels.
-         * The panel name is obtained by querying the metadata.
-         * The inspectable contains the actual attributes belonging to each panel.
-         */
-        return createSection(
-          mode,
-          metadata,
-          metadata.get(metadataId)?.name ?? '',
-          node.attributes[metadataId] as InspectableObject,
-        );
-      })}
-      {rawDisplayEnabled ?? (
+      {...sections}
+      {rawEnabled && (
         <Panel key="Raw" title="Raw Data" collapsed>
-          <DataInspector data={node.attributes} />
+          <DataInspector
+            data={{
+              ...node,
+              attributes: transform(node.attributes, metadata),
+            }}
+          />
         </Panel>
       )}
     </>

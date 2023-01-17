@@ -71,6 +71,13 @@ test('default formatter', () => {
   `);
 });
 
+test.unix('date formatter', () => {
+  // dates on windows don't support changed timezones
+  expect(
+    DataFormatter.format(new Date(1668609938.068577 * 1000)),
+  ).toMatchInlineSnapshot(`"01:45:38.068"`);
+});
+
 test('linkify formatter', () => {
   const linkify = (value: any) =>
     DataFormatter.format(value, DataFormatter.linkify);

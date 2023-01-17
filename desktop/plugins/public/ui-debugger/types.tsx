@@ -7,8 +7,6 @@
  * @format
  */
 
-import {TreeItemIndex} from 'react-complex-tree';
-
 export type Events = {
   init: InitEvent;
   subtreeUpdate: SubtreeUpdateEvent;
@@ -40,8 +38,9 @@ export type PerfStatsEvent = {
   start: number;
   traversalComplete: number;
   snapshotComplete: number;
-  serializationComplete: number;
   queuingComplete: number;
+  deferredComputationComplete: number;
+  serializationComplete: number;
   socketComplete: number;
   nodesCount: number;
 };
@@ -50,10 +49,23 @@ export type UpdateMetadataEvent = {
   attributeMetadata: Record<MetadataId, Metadata>;
 };
 
-export type UINode = {
+export type NestedNode = {
   id: Id;
   name: string;
+  attributes: Record<string, Inspectable>;
+  children: NestedNode[];
+  bounds: Bounds;
+  tags: Tag[];
+  activeChildIdx?: number;
+};
+
+export type UINode = {
+  id: Id;
+  parent?: Id; //this attribute doesn't come from the client and is set by the desktop
+  qualifiedName: string;
+  name: string;
   attributes: Record<MetadataId, Inspectable>;
+  inlineAttributes: Record<string, string>;
   children: Id[];
   bounds: Bounds;
   tags: Tag[];
@@ -103,19 +115,20 @@ export type Color = {
   r: number;
   g: number;
   b: number;
-  alpha: number;
+  a: number;
 };
 
 export type Snapshot = string;
-export type Id = number | TreeItemIndex;
+export type Id = number;
 
 export type MetadataId = number;
 export type TreeState = {expandedNodes: Id[]};
 
-export type Tag = 'Native' | 'Declarative' | 'Android' | 'Litho ';
+export type Tag = 'Native' | 'Declarative' | 'Android' | 'Litho' | 'CK' | 'iOS';
 
 export type Inspectable =
   | InspectableObject
+  | InspectableArray
   | InspectableText
   | InspectableNumber
   | InspectableColor
@@ -125,7 +138,8 @@ export type Inspectable =
   | InspectableCoordinate3D
   | InspectableSize
   | InspectableBounds
-  | InspectableSpaceBox;
+  | InspectableSpaceBox
+  | InspectableUnknown;
 
 export type InspectableText = {
   type: 'text';
@@ -144,7 +158,7 @@ export type InspectableBoolean = {
 
 export type InspectableEnum = {
   type: 'enum';
-  value: {value: string; values: string[]};
+  value: string;
 };
 
 export type InspectableColor = {
@@ -180,4 +194,14 @@ export type InspectableSpaceBox = {
 export type InspectableObject = {
   type: 'object';
   fields: Record<MetadataId, Inspectable>;
+};
+
+export type InspectableArray = {
+  type: 'array';
+  items: Inspectable[];
+};
+
+export type InspectableUnknown = {
+  type: 'unknown';
+  value: string;
 };

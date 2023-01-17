@@ -10,11 +10,13 @@ package com.facebook.flipper.plugins.uidebugger.descriptors
 import android.annotation.SuppressLint
 import android.util.TypedValue
 import android.view.Window
+import com.facebook.flipper.plugins.uidebugger.model.Bounds
 import com.facebook.flipper.plugins.uidebugger.model.Color
 import com.facebook.flipper.plugins.uidebugger.model.Inspectable
 import com.facebook.flipper.plugins.uidebugger.model.InspectableObject
 import com.facebook.flipper.plugins.uidebugger.model.InspectableValue
 import com.facebook.flipper.plugins.uidebugger.model.MetadataId
+import com.facebook.flipper.plugins.uidebugger.util.DisplayMetrics
 import java.lang.reflect.Field
 
 object WindowDescriptor : ChainedDescriptor<Window>() {
@@ -31,10 +33,12 @@ object WindowDescriptor : ChainedDescriptor<Window>() {
     return node.javaClass.simpleName
   }
 
+  override fun onGetBounds(node: Window): Bounds = DisplayMetrics.getDisplayBounds()
+
   override fun onGetChildren(node: Window): List<Any> = listOf(node.decorView)
 
   @SuppressLint("PrivateApi")
-  override fun onGetData(
+  override fun onGetAttributes(
       node: Window,
       attributeSections: MutableMap<MetadataId, InspectableObject>
   ) {
@@ -75,8 +79,7 @@ object WindowDescriptor : ChainedDescriptor<Window>() {
           val metadata = MetadataRegister.get(NAMESPACE, name)
           val identifier =
               metadata?.id
-                  ?: MetadataRegister.registerDynamic(
-                      MetadataRegister.TYPE_ATTRIBUTE, NAMESPACE, name)
+                  ?: MetadataRegister.register(MetadataRegister.TYPE_ATTRIBUTE, NAMESPACE, name)
 
           when (typedValue.type) {
             TypedValue.TYPE_STRING ->

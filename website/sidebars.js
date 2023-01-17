@@ -114,6 +114,7 @@ module.exports = {
           'extending/debugging',
           ...fbInternalOnly([
             'fb/adding-analytics-0',
+            'fb/logging',
             'extending/fb/plugin-documentation',
           ]),
           'extending/plugin-distribution',
@@ -129,7 +130,7 @@ module.exports = {
           'extending/node-apis',
           ...fbInternalOnly([
             {
-              'QPL Linting': ['fb/building-a-linter', 'fb/active-linters'],
+              'QPL Linting': ['fb/active-linters'],
             },
           ]),
         ],
@@ -147,34 +148,65 @@ module.exports = {
     'Under the Hood': [
       'internals/index',
       'internals/contributing',
-      {
-        'Contributing to the Documentation': ['internals/documentation-formatting', 'internals/documentation-writing-guide'],
-      },
+      'internals/device-identifiers',
+      'internals/linters',
       'extending/public-releases',
       'extending/testing-rn',
-      'internals/linters',
-      'internals/device-identifiers',
       ...fbInternalOnly([
-        'fb/release-infra',
-        'fb/LauncherConfig',
-        'fb/hacking-on-launcher',
-        'fb/arc_uiqr',
-        'fb/Flipper-fbsource-Pinning',
-        'fb/Flipper-Release-Cycle',
-        'fb/Add-Support-Group-to-Flipper-Support-Form',
-        'fb/Alerts',
-        'fb/bundling',
-        'fb/Electron-Upgrade',
-        'fb/flipper-analytics',
-        'fb/Navigation-Plugin-Development-Guide',
-        'fb/Oncall-Runbook',
-        'fb/sandcastle',
-        'fb/Star-Ratings',
-        'fb/sandcastle-overview',
-        'fb/error-logging',
-        'fb/scribe',
-        'fb/async-testing',
-        'fb/connections',
+        {
+          'Internal': [
+            {
+              'Contributing to the Documentation': [
+                'internals/documentation-standards',
+                'internals/documentation-writing-guide',
+                'internals/documentation-formatting',
+              ]
+            },
+            'fb/arc_uiqr',
+            'fb/connections',
+            {
+              'Data Pipelines': [
+                'fb/data-pipelines',
+                'fb/data-pipelines-details',
+                'fb/flipper-analytics',
+                'fb/scribe',
+                'fb/error-logging',
+              ]
+            },
+            'fb/Electron-Upgrade',
+            {
+              'Launcher': [
+                'fb/hacking-on-launcher',
+                'fb/LauncherConfig',
+              ]
+            },
+            'fb/bundling',
+            'fb/Navigation-Plugin-Development-Guide',
+            {
+              'Releases': [
+                'fb/Flipper-Release-Cycle',
+                'fb/release-infra',
+                'fb/Flipper-fbsource-Pinning',
+              ]
+            },
+            {
+              'Sandcastle': [
+                'fb/sandcastle-overview',
+                'fb/sandcastle',
+              ]
+            },
+            {
+              'Support': [
+                'fb/Alerts',
+                'fb/Add-Support-Group-to-Flipper-Support-Form',
+                'fb/Oncall-Runbook',
+              ]
+            },
+            'fb/Star-Ratings',
+            'fb/async-testing',
+            'fb/code-freeze',
+          ]
+        }
       ]),
     ],
   },
