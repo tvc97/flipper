@@ -889,6 +889,29 @@ const [showWhitespace, setShowWhitespace] = useLocalStorageState(
 Layout elements can be used to organize the screen layout.
 See the [Style Guide](style-guide.mdx) for more details.
 
+### HighlightContext
+
+### HighlightProvider
+
+React context provider for Highlight context. All wrapped componets can access context or use the useHighligher helper. Example
+```typescript jsx
+<HighlightProvider
+  text={searchTerm}
+  highlightColor={theme.searchHighlightBackground.yellow}>
+  <HighlightedText text='Lorem itsum'/>
+</HighlightProvider>
+````
+
+### useHighlighter
+
+Hook to be used inside a Highlight context to render text with highlighting applied. Example
+```typescript jsx
+function HighlightedText(props: {text: string}) {
+  const highlightManager: HighlightManager = useHighlighter();
+  return <span>{highlightManager.render(props.text)}</span>;
+}
+```
+
 ### DataTable
 
 ### DataFormatter
@@ -1075,7 +1098,7 @@ Example:
 getFlipperLib().writeTextToClipboard("hello from Flipper");
 ```
 
-The full set of utilities is listed in [FlipperLib.tsx](https://github.com/facebook/flipper/blob/main/desktop/flipper-plugin/src/plugin/FlipperLib.tsx#L94).
+The full set of utilities is listed in [FlipperLib.tsx](https://github.com/facebook/flipper/blob/main/desktop/flipper-plugin-core/src/plugin/FlipperLib.tsx#L95).
 
 Since the Node.js system API's cannot be used directly by Flipper plugins (when running in a browser), the utilties exposed on `getFlipperLib().remoteServerContext` should be used instead, as detailed in [Using Node.js APIs](node-apis.mdx).
 
